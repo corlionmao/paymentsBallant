@@ -1,0 +1,58 @@
+<div class="dashboard">
+	<header class="toolbar">
+		<div class="wordmark"><span>LL</span><strong>LEDGERLINE</strong></div>
+		<div class="toolbar-meta">
+			<span>{{ auth.getUsername() || 'Operator' }}</span>
+			<button type="button" class="logout" (click)="logout()">Sign out <span aria-hidden="true">↗</span></button>
+		</div>
+	</header>
+	<main class="content">
+		<div class="page-intro">
+			<div>
+				<p class="kicker">PAYMENT OPERATIONS / 2026</p>
+				<h1>Transaction ledger</h1>
+				<p class="subhead">Monitor every movement across your payment network.</p>
+			</div>
+			<button type="button" class="refresh" (click)="loadPayments()" [disabled]="isLoading()" aria-label="Refresh payments">↻ <span>Refresh</span></button>
+		</div>
+
+		@if (errorMessage(); as message) {
+			<div class="alert" role="alert"><strong>Unable to complete request.</strong> {{ message }} <button type="button" (click)="loadPayments()">Retry</button></div>
+		}
+
+		<section class="ledger">
+			<div class="ledger-head"><span>TRANSACTION ID</span><span>AMOUNT</span><span>CURRENCY</span><span>STATUS</span><span>CREATED</span><span>ACTIONS</span></div>
+			@if (isLoading()) {
+				<div class="state">Loading payment ledger...</div>
+			} @else if (payments().length === 0) {
+				<div class="state"><strong>No payments yet.</strong><span>New transactions will appear here.</span></div>
+			} @else {
+				@for (payment of paginatedPayments(); track payment.id) {
+					<div class="ledger-row">
+						<span class="transaction-id" title="{{ payment.id }}">{{ payment.id }}</span>
+						<strong>{{ payment.amount | number:'1.2-2' }}</strong>
+						<span>{{ payment.currency }}</span>
+						<span><b class="status" [class.pending]="payment.status === 'Pending'" [class.completed]="payment.status === 'Completed'" [class.failed]="payment.status === 'Failed'">{{ payment.status }}</b></span>
+						<time [attr.datetime]="payment.createdAt">{{ payment.createdAt | date:'mediumDate' }}</time>
+						<span class="actions">
+							@if (payment.status === 'Pending') {
+								<button type="button" (click)="complete(payment)" [disabled]="workingId() === payment.id">✓ Complete</button>
+								<button type="button" class="cancel" (click)="cancel(payment)" [disabled]="workingId() === payment.id">× Cancel</button>
+							} @else {
+								<span class="dash">—</span>
+							}
+						</span>
+					</div>
+				}
+				<footer class="pagination">
+					<span>Showing {{ ((currentPage() - 1) * pageSize()) + 1 }}–{{ displayedRangeEnd() }} of {{ payments().length }}</span>
+					<label for="page-size">Rows <select id="page-size" [value]="pageSize()" (change)="setPageSize($any($event.target).value)"><option value="5">5</option><option value="10">10</option><option value="20">20</option></select></label>
+					<button type="button" (click)="setPage(currentPage() - 1)" [disabled]="currentPage() === 1" aria-label="Previous page">←</button>
+					<span>Page {{ currentPage() }} of {{ totalPages() }}</span>
+					<button type="button" (click)="setPage(currentPage() + 1)" [disabled]="currentPage() === totalPages()" aria-label="Next page">→</button>
+				</footer>
+			}
+		</section>
+		<app-payment-form (created)="loadPayments()" />
+	</main>
+</div>
